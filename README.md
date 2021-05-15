@@ -2,7 +2,7 @@
 
 pip install tradingview-ta
 
-python tradingviewprices.py <PERCENT TO ARBITRAGE BY>
+python tradingviewprices.py PRICE_ALERT_PERCENTAGE
 
 set PRICE_ALERT_PERCENTAGE to desired differential 
 
