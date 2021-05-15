@@ -10,7 +10,6 @@ if len(sys.argv) > 1:
 COIN_LIST_PATH = '/home/ec2-user/script/coin_list.txt' if EC2_mode else 'coin_list.txt'
 EXCHANGE_LIST_PATH = '/home/ec2-user/script/exchange_list.txt' if EC2_mode else 'exchange_list.txt'
 PRICE_ALERT_PERCENTAGE = .08 if EC2_mode else int(sys.argv[1]) / 100
-print(PRICE_ALERT_PERCENTAGE)
 
 coins, exchanges, alerted_coins, printout = [], [], [], []
 
