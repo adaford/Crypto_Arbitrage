@@ -9,3 +9,5 @@ set PRICE_ALERT_PERCENTAGE to desired differential
 compares cryptocurrency prices for individual coins across several exchanges and looks for coins with large differences in price indicating an arbitrage opportunity.
 
 $python tradingviewprices.py 6  ----------> searches all exchanges for any coins with a 6% or greater price differential.
+
+$python coinmarketcap_price.py -----------> returns current prices for top 50 coins on coinmarketcap as a dictionary 
