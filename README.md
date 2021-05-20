@@ -15,4 +15,5 @@ $python tradingviewprices.py 6  ----------> searches all exchanges for any coins
 #CoinMarketCap.com Compare
 
 import get_exchange_prices
+
 $python find_arbitrage.py PRICE_ALERT_PERCENTAGE   ---------------------> Searches all US exchanges for any coins with a x% price differential from coinmarketcap value
