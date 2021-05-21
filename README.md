@@ -15,3 +15,6 @@ $python tradingviewprices.py 6  ----------> searches exchanges in exchange_list.
 #CoinMarketCap.com compare --------------- This one works much better
 
 $python find_arbitrage.py <PRICE_ALERT_PERCENTAGE>   ---------------------> Searches several US exchanges for any coins with a <PRICE_ALERT_PERCENTAGE> price differential from coinmarketcap value
+
+
+Spot out whale market orders as soon as they happen
