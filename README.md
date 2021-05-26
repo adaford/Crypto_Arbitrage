@@ -2,7 +2,7 @@
 
 $python find_arbitrage.py <PRICE_ALERT_PERCENTAGE>   ---------------------> Searches several US exchanges for any coins with a <PRICE_ALERT_PERCENTAGE> price differential from coinmarketcap value
 
-only files needed are find_arbirage.py and get_exchange_prices.py
+Pulls coin data for top 130+ coins from CoinMarketCap and compares values with exchanges Kraken, BinanceUS, Kucoin, Gemini, Bittrex, and CoinbasePro
 
 Spot out whale market orders as soon as they happen
 
