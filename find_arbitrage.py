@@ -17,7 +17,6 @@ with open(COIN_LIST_PATH) as c:
 	coins = c.read().splitlines()
 
 coinmarketcap_prices = get_exchange_prices.get_prices_coinmarketcap()
-
 kraken_prices = get_exchange_prices.get_kraken_prices(coins)
 coinbasepro_prices = get_exchange_prices.get_coinbasepro_prices(coins)
 binanceUS_prices = get_exchange_prices.get_binanceUS_prices(coins)

@@ -9,7 +9,7 @@ def get_prices_coinmarketcap():
 	url = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest'
 	parameters = {
 		'start':'1',
-		'limit':'100',
+		'limit':'150',
 		'convert':'USD'
 	}
 	headers = {
@@ -23,11 +23,13 @@ def get_prices_coinmarketcap():
 	try:
 		response = session.get(url, params=parameters)
 		data = json.loads(response.text)["data"]
-		for i in range(0,100):
+		for i in range(0,131):
 			ret[data[i]["symbol"]] = float(data[i]["quote"]["USD"]["price"])
 		return ret
 	except (ConnectionError, Timeout, TooManyRedirects) as e:
 		print(e)
+
+	
 
 
 def get_kraken_prices(coins):
