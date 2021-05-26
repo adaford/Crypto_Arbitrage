@@ -45,6 +45,12 @@ def get_kraken_prices(coins):
 
 	ret["BTC"] = ret["XBT"]
 	ret["DOGE"] = ret["XDG"]
+	del ret["ZRX"]
+	del ret["XRP"]
+	del ret["ENJ"]
+	del ret["MKR"]
+	del ret["ANKR"]
+	del ret["BNT"]
 
 	return ret
 
@@ -95,5 +101,23 @@ def get_gemini_prices(coins):
 		resp = requests.get('https://api.gemini.com/v1/pubticker/{}'.format(c+"USD")).json()
 		if 'bid' in resp:
 			ret[c] = float(resp['bid'])
+
+	return ret
+
+
+def get_bittrex_prices(coins):
+	ret = {}
+	for c in coins:
+		try:
+			resp = requests.get('https://api.bittrex.com/v3/markets/{}/ticker'.format(c+'-USD')).json()
+			if 'lastTradeRate' in resp:
+				ret[c] = resp['bidRate']
+			else:
+				try:
+					ret[c] = requests.get('https://api.bittrex.com/v3/markets/{}/ticker'.format(c+'-USDT')).json()
+				except:
+					pass
+		except:
+			pass
 
 	return ret

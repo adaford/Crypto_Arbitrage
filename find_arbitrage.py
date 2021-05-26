@@ -9,7 +9,7 @@ if len(sys.argv) > 1:
 	EC2_mode = False
 
 COIN_LIST_PATH = '/home/ec2-user/script/coin_list.txt' if EC2_mode else 'coin_list.txt'
-PRICE_ALERT_PERCENTAGE = .12 if EC2_mode else float(sys.argv[1]) / 100
+PRICE_ALERT_PERCENTAGE = .08 if EC2_mode else float(sys.argv[1]) / 100
 
 coins, alerted_coins = [], []
 
@@ -23,6 +23,8 @@ coinbasepro_prices = get_exchange_prices.get_coinbasepro_prices(coins)
 binanceUS_prices = get_exchange_prices.get_binanceUS_prices(coins)
 kucoin_prices = get_exchange_prices.get_kucoin_prices(coins)
 gemini_prices = get_exchange_prices.get_gemini_prices(coins)
+bittrex_prices = get_exchange_prices.get_bittrex_prices(coins)
+
 
 coin_prices = {}
 for coin in coins:
@@ -44,13 +46,16 @@ for c,v in coin_prices.items():
 	if coin not in coinmarketcap_prices:
 		continue
 
-	percent_difference = (coinmarketcap_prices[coin] - v) / max(coinmarketcap_prices[coin],v)
+	percent_difference = (coinmarketcap_prices[coin] - v) / coinmarketcap_prices[coin] if coinmarketcap_prices[coin] >= v else (coinmarketcap_prices[coin] - v) / v
+
 	if abs(percent_difference) > PRICE_ALERT_PERCENTAGE:
-		alerted_coins.append([coin,exchange,str(round(-100*percent_difference,2))+'%',
-			"CoinMarketCap_price: {}".format(coinmarketcap_prices[coin]),"{}_price: {}".format(exchange,v)])
+		alerted_coins.append([coin,exchange,round(-100*percent_difference,2),
+			"CoinMarketCap_price: {}".format(round(coinmarketcap_prices[coin],3)),"{}_price: {}".format(exchange,round(v,3))])
 
 
-alerted_coins.sort(key=lambda x: x[2], reverse=True)
+alerted_coins.sort(key=lambda x: abs(x[2]), reverse=True)
+for a in alerted_coins:
+	a[2] = str(a[2]) + '%'
 if len(alerted_coins) > 0:
 	print(alerted_coins)
 else:
