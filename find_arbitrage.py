@@ -7,20 +7,24 @@ import get_exchange_prices
 EC2_mode = True if len(sys.argv) == 1 else False
 
 COIN_LIST_PATH = '/home/ec2-user/script/coin_list.txt' if EC2_mode else 'coin_list.txt'
+KRAKEN_COIN_LIST_PATH = '/home/ec2-user/script/kraken_coin_list.txt' if EC2_mode else 'kraken_coin_list.txt'
 PRICE_ALERT_PERCENTAGE = .08 if EC2_mode else float(sys.argv[1]) / 100
 
-coins, alerted_coins = [], []
+coins, kraken_coins, alerted_coins = [], [], []
 
 with open(COIN_LIST_PATH) as c:
 	coins = c.read().splitlines()
+with open(KRAKEN_COIN_LIST_PATH) as c:
+	kraken_coins = c.read().splitlines()
 
 coinmarketcap_prices = get_exchange_prices.get_prices_coinmarketcap()
-kraken_prices = get_exchange_prices.get_kraken_prices(coins)
-#coinbasepro_prices = get_exchange_prices.get_coinbasepro_prices(coins)
+kraken_prices = get_exchange_prices.get_kraken_prices(kraken_coins)
+#coinbasepro_prices = get_exchange_prices.get_coinbasepro_prices(coins)   too slow
 binanceUS_prices = get_exchange_prices.get_binanceUS_prices(coins)
 kucoin_prices = get_exchange_prices.get_kucoin_prices(coins)
 gemini_prices = get_exchange_prices.get_gemini_prices(coins)
 bittrex_prices = get_exchange_prices.get_bittrex_prices(coins)
+
 
 coin_prices = {}
 for coin in coins:

@@ -32,9 +32,9 @@ def get_prices_coinmarketcap():
 	
 
 #slow
-def get_kraken_prices(coins):
+def get_kraken_prices(kraken_coins):
 	ret = {}
-	for c in coins:
+	for c in kraken_coins:
 		resp = requests.get('https://api.kraken.com/0/public/Ticker?pair={}USD'.format(c))
 
 		try:
@@ -47,13 +47,6 @@ def get_kraken_prices(coins):
 
 	ret["BTC"] = ret["XBT"]
 	ret["DOGE"] = ret["XDG"]
-	del ret["ZRX"]
-	del ret["XRP"]
-	del ret["ENJ"]
-	del ret["MKR"]
-	del ret["ANKR"]
-	del ret["BNT"]
-	
 	return ret
 
 
