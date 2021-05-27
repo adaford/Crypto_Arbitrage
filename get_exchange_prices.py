@@ -50,7 +50,6 @@ def get_kraken_prices(kraken_coins):
 	return ret
 
 
-#slow
 def get_coinbasepro_prices(coins):
 	ret = {}
 	for c in coins:
