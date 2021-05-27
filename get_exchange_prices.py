@@ -31,7 +31,7 @@ def get_prices_coinmarketcap():
 
 	
 
-
+#slow
 def get_kraken_prices(coins):
 	ret = {}
 	for c in coins:
@@ -53,10 +53,11 @@ def get_kraken_prices(coins):
 	del ret["MKR"]
 	del ret["ANKR"]
 	del ret["BNT"]
-
+	
 	return ret
 
 
+#slow
 def get_coinbasepro_prices(coins):
 	ret = {}
 	for c in coins:
@@ -99,27 +100,35 @@ def get_kucoin_prices(coins):
 
 def get_gemini_prices(coins):
 	ret = {}
-	for c in coins:
-		resp = requests.get('https://api.gemini.com/v1/pubticker/{}'.format(c+"USD")).json()
-		if 'bid' in resp:
-			ret[c] = float(resp['bid'])
+
+	resp = requests.get('https://api.gemini.com/v1/pricefeed').json()
+	for c in resp:
+		coin = c['pair']
+		if coin[-3:] == "USD":
+			ret[coin.replace("USD","")] = float(c['price'])
 
 	return ret
 
 
 def get_bittrex_prices(coins):
 	ret = {}
-	for c in coins:
-		try:
-			resp = requests.get('https://api.bittrex.com/v3/markets/{}/ticker'.format(c+'-USD')).json()
-			if 'lastTradeRate' in resp:
-				ret[c] = resp['bidRate']
-			else:
-				try:
-					ret[c] = requests.get('https://api.bittrex.com/v3/markets/{}/ticker'.format(c+'-USDT')).json()
-				except:
-					pass
-		except:
-			pass
+	resp = requests.get('https://api.bittrex.com/v3/markets/tickers').json()
+	for c in resp:
+		coin = c['symbol']
+		if coin[-3:] == "USD":
+			ret[coin.replace("-USD","")] = float(c['lastTradeRate'])
+		elif coin[-4:] == "USDT":
+			ret[coin.replace("-USDT","")] = float(c['lastTradeRate'])
+
+	del ret["CRV"]
+	del ret["RENBTC"]
+	del ret["KLAY"]
+	del ret["WBTC"]
+	del ret["REV"]
+	del ret["SNX"]
+	del ret["CRO"]
+	del ret["AVAX"]
+	del ret["USDN"]
+	del ret["RSR"]
 
 	return ret
