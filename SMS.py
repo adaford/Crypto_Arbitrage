@@ -10,10 +10,10 @@ carriers = {
 def send(message):
 	try:
 	        # Replace the number with your own, or consider using an argument\dict for multiple people.
-	    to_numbers = ['2486603999{}'.format(carriers['verizon']), 
-	    			  '2487978087{}'.format(carriers['verizon'])] 
-	    			  #'2027172066{}'.format(carriers['sprint'])]
-	    			  #'2489612358{}'.format(carriers['tmobile'])]
+	    to_numbers = ['xxxxxxxxxx{}'.format(carriers['verizon']), 
+	    			  'xxxxxxxxxx{}'.format(carriers['verizon'])] 
+	    			  #'xxxxxxxxxx{}'.format(carriers['sprint'])]
+	    			  #'xxxxxxxxxx{}'.format(carriers['tmobile'])]
 	    			  
 	    auth = (email, password)
 	    server = smtplib.SMTP( "smtp.gmail.com", 587 )
