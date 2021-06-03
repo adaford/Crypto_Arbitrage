@@ -50,9 +50,9 @@ def get_kraken_prices(kraken_coins):
 	return ret
 
 
-def get_coinbasepro_prices(coins):
+def get_coinbasepro_prices(coinbasepro_coins):
 	ret = {}
-	for c in coins:
+	for c in coinbasepro_coins:
 		resp = requests.get('https://api.pro.coinbase.com/products/{}/ticker'.format(c+"-USD"))
 
 		try:
@@ -63,19 +63,20 @@ def get_coinbasepro_prices(coins):
 	return ret
 
 
-def get_binanceUS_prices(coins):
+#could be fixed
+def get_binanceUS_prices(binanceUS_coins):
 	ret = {}
 	resp = requests.get('https://api.binance.us/api/v3/ticker/bookTicker').json()
 	for pair in resp:
-		if pair['symbol'].replace("USD","") in coins:
+		if pair['symbol'].replace("USD","") in binanceUS_coins:
 			ret[pair['symbol'].replace("USD","")] = float(pair['bidPrice'])
-		elif pair['symbol'].replace("USDT","") in coins:
+		elif pair['symbol'].replace("USDT","") in binanceUS_coins:
 			ret[pair['symbol'].replace("USDT","")] = float(pair['bidPrice'])
-		elif pair['symbol'].replace("BUSD","") in coins:
+		elif pair['symbol'].replace("BUSD","") in binanceUS_coins:
 			ret[pair['symbol'].replace("BUSD","")] = float(pair['bidPrice'])
 
-	del ret['XRP']
-	del ret['NANO']
+	#del ret["DASH"]
+
 	return ret
 
 
