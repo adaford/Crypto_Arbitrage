@@ -23,12 +23,14 @@ def get_liquidity(coin,exchange,overvalued,market_value):
 def main():
 	EC2_mode = True if len(sys.argv) == 1 else False
 
+	OUTPUT_PATH = '/home/ec2-user/script/output.log' if EC2_mode else 'output.log'
+
 	COIN_LIST_PATH = '/home/ec2-user/script/coin_list.txt' if EC2_mode else 'coin_list.txt'
 	KRAKEN_COIN_LIST_PATH = '/home/ec2-user/script/kraken_coin_list.txt' if EC2_mode else 'kraken_coin_list.txt'
 	COINBASEPRO_COIN_LIST_PATH = '/home/ec2-user/script/coinbasepro_coin_list.txt' if EC2_mode else 'coinbasepro_coin_list.txt'
 	BINANCEUS_COIN_LIST_PATH =  '/home/ec2-user/script/binanceUS_coin_list.txt' if EC2_mode else 'binanceUS_coin_list.txt'
 
-	PRICE_ALERT_PERCENTAGE = .08 if EC2_mode else float(sys.argv[1]) / 100
+	PRICE_ALERT_PERCENTAGE = .1 if EC2_mode else float(sys.argv[1]) / 100
 
 
 
@@ -49,8 +51,8 @@ def main():
 			break
 		except:
 			if i == 4:
-				with open('output.log', 'w') as f:
-					json.dump([0,0,0,0,0],f)
+				with open(OUTPUT_PATH, 'w') as f:
+					json.dump([[0,0,0,0,0]],f)
 					print([0,0,0,0,0])
 				exit(0)
 	kraken_prices = get_exchange_prices.get_kraken_prices(kraken_coins)
@@ -82,7 +84,7 @@ def main():
 	for c,v in coin_prices.items():
 		coin,exchange = c[0],c[1]
 
-		percent_difference = (coinmarketcap_prices[coin] - v) / coinmarketcap_prices[coin] if coinmarketcap_prices[coin] >= v else (coinmarketcap_prices[coin] - v) / v
+		percent_difference = (coinmarketcap_prices[coin] - v) / v if coinmarketcap_prices[coin] >= v else (coinmarketcap_prices[coin] - v) / coinmarketcap_prices[coin]
 
 		if abs(percent_difference) > PRICE_ALERT_PERCENTAGE:
 			liquidity = get_liquidity(coin,exchange,percent_difference<0,coinmarketcap_prices[coin])
@@ -96,13 +98,13 @@ def main():
 	for a in alerted_coins:
 		a[2] = str(a[2]) + '%'
 
-	with open('output.log', 'w') as f:
+	with open(OUTPUT_PATH, 'w') as f:
 		if len(alerted_coins) > 0:
 			json.dump(alerted_coins,f)
 			for a in alerted_coins:
 				print(a)
 		else:
-			json.dump([0,0,0,0,0],f)
+			json.dump([[0,0,0,0,0]],f)
 			print([0,0,0,0,0])
 
 main()

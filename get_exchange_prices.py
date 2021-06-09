@@ -47,6 +47,7 @@ def get_kraken_prices(kraken_coins):
 
 	ret["BTC"] = ret["XBT"]
 	ret["DOGE"] = ret["XDG"]
+	del ret["KNC"]
 	return ret
 
 
@@ -75,7 +76,8 @@ def get_binanceUS_prices(binanceUS_coins):
 		elif pair['symbol'].replace("BUSD","") in binanceUS_coins:
 			ret[pair['symbol'].replace("BUSD","")] = float(pair['bidPrice'])
 
-	#del ret["DASH"]
+	del ret["DASH"]
+	del ret["KNC"]
 
 	return ret
 
@@ -100,6 +102,7 @@ def get_gemini_prices(coins):
 		if coin[-3:] == "USD":
 			ret[coin.replace("USD","")] = float(c['price'])
 
+	del ret["KNC"]
 	return ret
 
 
@@ -123,5 +126,8 @@ def get_bittrex_prices(coins):
 	del ret["AVAX"]
 	del ret["USDN"]
 	del ret["RSR"]
+	del ret["1INCH"]
+	del ret["CKB"]
+	del ret["KSM"]
 
 	return ret
