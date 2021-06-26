@@ -24,30 +24,18 @@ def main():
 	EC2_mode = True if len(sys.argv) == 1 else False
 
 	OUTPUT_PATH = '/home/ec2-user/script/output.log' if EC2_mode else 'output.log'
-
-	COIN_LIST_PATH = '/home/ec2-user/script/coin_list.txt' if EC2_mode else 'coin_list.txt'
-	KRAKEN_COIN_LIST_PATH = '/home/ec2-user/script/kraken_coin_list.txt' if EC2_mode else 'kraken_coin_list.txt'
-	COINBASEPRO_COIN_LIST_PATH = '/home/ec2-user/script/coinbasepro_coin_list.txt' if EC2_mode else 'coinbasepro_coin_list.txt'
 	BINANCEUS_COIN_LIST_PATH =  '/home/ec2-user/script/binanceUS_coin_list.txt' if EC2_mode else 'binanceUS_coin_list.txt'
 
 	PRICE_ALERT_PERCENTAGE = .1 if EC2_mode else float(sys.argv[1]) / 100
 
+	binanceUS_coins, alerted_coins = [], []
 
-
-	coins, kraken_coins, coinbasepro_coins, binanceUS_coins, alerted_coins = [], [], [], [], []
-
-	with open(COIN_LIST_PATH) as c:
-		coins = c.read().splitlines()
-	with open(KRAKEN_COIN_LIST_PATH) as c:
-		kraken_coins = c.read().splitlines()
-	with open(COINBASEPRO_COIN_LIST_PATH) as c:
-		coinbasepro_coins = c.read().splitlines()
 	with open(BINANCEUS_COIN_LIST_PATH) as c:
 		binanceUS_coins = c.read().splitlines()
 
 	for i in range(5):
 		try: 
-			coinmarketcap_prices = get_exchange_prices.get_prices_coinmarketcap()
+			coinmarketcap_prices = {k:v for k,v in get_exchange_prices.get_prices_coinmarketcap().items() if 'USD' not in k}
 			break
 		except:
 			if i == 4:
@@ -55,18 +43,19 @@ def main():
 					json.dump([[0,0,0,0,0]],f)
 					print([0,0,0,0,0])
 				exit(0)
-	kraken_prices = get_exchange_prices.get_kraken_prices(kraken_coins)
-	coinbasepro_prices = get_exchange_prices.get_coinbasepro_prices(coinbasepro_coins)
+	
+	coins = [k for k,v in coinmarketcap_prices.items()]
+
+	kraken_prices = get_exchange_prices.get_kraken_prices()
+	coinbasepro_prices = get_exchange_prices.get_coinbasepro_prices()
 	binanceUS_prices = get_exchange_prices.get_binanceUS_prices(binanceUS_coins)
 	kucoin_prices = get_exchange_prices.get_kucoin_prices(coins)
-	gemini_prices = get_exchange_prices.get_gemini_prices(coins)
+	gemini_prices = get_exchange_prices.get_gemini_prices()
 	bittrex_prices = get_exchange_prices.get_bittrex_prices(coins)
 
 
 	coin_prices = {}
 	for coin in coins:
-		if coin not in coinmarketcap_prices.keys():
-			continue
 		if coin in kraken_prices:
 			coin_prices[(coin,"KRAKEN")] = kraken_prices[coin]
 		if coin in coinbasepro_prices:
@@ -83,20 +72,45 @@ def main():
 
 	for c,v in coin_prices.items():
 		coin,exchange = c[0],c[1]
+		if coinmarketcap_prices[coin] <= 0 or v <= 0:
+			print("error on {} on {} for coin {}".format(coinmarketcap_prices[coin],exchange,coin))
+			continue
 
 		percent_difference = (coinmarketcap_prices[coin] - v) / v if coinmarketcap_prices[coin] >= v else (coinmarketcap_prices[coin] - v) / coinmarketcap_prices[coin]
 
 		if abs(percent_difference) > PRICE_ALERT_PERCENTAGE:
 			liquidity = get_liquidity(coin,exchange,percent_difference<0,coinmarketcap_prices[coin])
+			if type(liquidity) != str and liquidity < 5000:
+				continue
 			alerted_coins.append([coin,exchange,round(-100*percent_difference,2),
-				"CoinMarketCap_price: {}".format(round(coinmarketcap_prices[coin],3)),
-					"{}_price: {}".format(exchange,round(v,3)), 
+				"CoinMarketCap_price: {}".format(round(coinmarketcap_prices[coin],4)),
+					"{}_price: {}".format(exchange,round(v,4)), 
 					"liquidity: ${}".format(liquidity)])
 
 
 	alerted_coins.sort(key=lambda x: abs(x[2]), reverse=True)
+	only_on_one_exchange = []
+	
 	for a in alerted_coins:
 		a[2] = str(a[2]) + '%'
+		c=0
+		if a[0] in kraken_prices:
+			c+=1
+		if a[0] in coinbasepro_prices:
+			c+=1
+		if a[0] in binanceUS_prices:
+			c+=1
+		if a[0] in kucoin_prices:
+			c+=1
+		if a[0] in gemini_prices:
+			c+=1
+		if a[0] in bittrex_prices:
+			c+=1
+		if c < 2:
+			only_on_one_exchange.append(a)
+
+	for a in only_on_one_exchange:
+		alerted_coins.remove(a)
 
 	with open(OUTPUT_PATH, 'w') as f:
 		if len(alerted_coins) > 0:
