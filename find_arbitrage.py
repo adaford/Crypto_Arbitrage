@@ -51,7 +51,7 @@ def main():
 	binanceUS_prices = get_exchange_prices.get_binanceUS_prices(binanceUS_coins)
 	kucoin_prices = get_exchange_prices.get_kucoin_prices(coins)
 	gemini_prices = get_exchange_prices.get_gemini_prices()
-	bittrex_prices = get_exchange_prices.get_bittrex_prices(coins)
+	bittrex_prices = get_exchange_prices.get_bittrex_prices()
 
 
 	coin_prices = {}
@@ -69,7 +69,6 @@ def main():
 		if coin in bittrex_prices:
 			coin_prices[(coin,"BITTREX")] = bittrex_prices[coin]
 		
-
 	for c,v in coin_prices.items():
 		coin,exchange = c[0],c[1]
 		if coinmarketcap_prices[coin] <= 0 or v <= 0:
@@ -90,7 +89,7 @@ def main():
 
 	alerted_coins.sort(key=lambda x: abs(x[2]), reverse=True)
 	only_on_one_exchange = []
-	
+
 	for a in alerted_coins:
 		a[2] = str(a[2]) + '%'
 		c=0

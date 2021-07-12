@@ -39,8 +39,8 @@ def get_kraken_prices():
 	except:
 		print("Kraken prices unavailable")
 		return ret
-
-	coins = [val['altname'] for key, val in resp.items() if ('.' not in key and 'USD' not in key)]
+	not_us_coins = {'ANKR','BNT','ENJ','EWT','FLOW','GHST','GRT','LPT','MATIC','MINA','MKR','RARI','REN','SAND','SOL','SRM','SUSHI','XRP','ZRX'}
+	coins = [val['altname'] for key, val in resp.items() if ('.' not in key and 'USD' not in key and key not in not_us_coins)]
 	for c in coins:
 		try:
 			resp = requests.get('https://api.kraken.com/0/public/Ticker?pair={}USD'.format(c))
@@ -73,6 +73,7 @@ def get_coinbasepro_prices():
 		return ret
 
 	coins = [k['id'] for k in resp if "USD" in k['id']]
+	
 	for c in coins:
 		try:
 			resp = requests.get('https://api.pro.coinbase.com/products/{}/ticker'.format(c))
@@ -100,9 +101,8 @@ def get_binanceUS_prices(binanceUS_coins):
 		elif pair['symbol'].replace("BUSD","") in binanceUS_coins:
 			ret[pair['symbol'].replace("BUSD","")] = float(pair['bidPrice'])
 
-	#del ret["DASH"]
-	#del ret["KNC"]
-	del ret["HNT"]
+	del ret["XLM"]
+	#del ret["HNT"]
 
 	return ret
 
@@ -110,7 +110,12 @@ def get_binanceUS_prices(binanceUS_coins):
 def get_kucoin_prices(coins):
 	#uses strictly usdt
 	ret = {}
-	resp = requests.get('https://api.kucoin.com/api/v1/market/allTickers').json()['data']['ticker']
+	try:
+		resp = requests.get('https://api.kucoin.com/api/v1/market/allTickers').json()['data']['ticker']
+	except:
+		print("cant get kucoin prices")
+		return ret
+
 	for d in resp:
 		if d['symbol'].replace("-USDT","") in coins:
 			ret[d['symbol'].replace("-USDT","")] = float(d['buy'])
@@ -119,8 +124,12 @@ def get_kucoin_prices(coins):
 
 
 def get_gemini_prices():
-	coins =requests.get('https://api.gemini.com/v1/symbols').json()
 	ret = {}
+	try:
+		coins = requests.get('https://api.gemini.com/v1/symbols').json()
+	except:
+		print("cant get gemini coins")
+		return ret
 	for c in coins:
 		if "usd" in c:
 			ret[c.replace("usd","").upper()] = float(requests.get('https://api.gemini.com/v1/pubticker/{}'.format(c)).json()['last'])
@@ -128,7 +137,7 @@ def get_gemini_prices():
 	return ret
 
 
-def get_bittrex_prices(coins):
+def get_bittrex_prices():
 	ret = {}
 	resp = requests.get('https://api.bittrex.com/v3/markets/tickers').json()
 	for c in resp:
@@ -154,6 +163,7 @@ def get_bittrex_prices(coins):
 		del ret["KSM"]
 		del ret["QTUM"]
 		del ret["LUNA"]
+		del ret["AMP"]
 	except:
 		pass
 
