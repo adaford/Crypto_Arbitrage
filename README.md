@@ -1,4 +1,6 @@
-# CoinMarketCap.com compare
+# CoinMarketCap compare
+
+WEBSITE: http://cryptoarbitrage.byethost6.com/
 
 $python find_arbitrage.py <PRICE_ALERT_PERCENTAGE> -------> Searches several US exchanges for any coins with a <PRICE_ALERT_PERCENTAGE> price differential from coinmarketcap value
 
