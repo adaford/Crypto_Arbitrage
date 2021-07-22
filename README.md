@@ -10,7 +10,9 @@ $python find_arbitrage.py 6 -------> Looks for a >6% price differential between 
 
 Be alerted to fat fingered whale market orders as soon as they happen!
 
-Now shows available liquidity before market value is reached on every exchange except for BinanceUS
+******************************************************************************************************************************************************************
+
+python knc_bot.py ------> runs a continuous trading bot for knc on gemini
 
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
