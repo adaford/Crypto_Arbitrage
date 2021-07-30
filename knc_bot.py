@@ -16,8 +16,8 @@ time_counter = 0
 
 def send_request_gemini(req,order_id,sell_quantity):
 	url = "https://api.gemini.com/v1/{}".format(req)
-	gemini_api_key = '*******************************'
-	gemini_api_secret = "******************************".encode()
+	gemini_api_key = 'yours'
+	gemini_api_secret = 'yours'.encode()
 
 	t = datetime.datetime.now()
 	global time_counter
@@ -31,8 +31,9 @@ def send_request_gemini(req,order_id,sell_quantity):
 	elif sell_quantity:
 		payload['symbol'], payload['side'], payload['type'], payload['options'] = 'kncusd', 'sell', 'exchange limit', ["maker-or-cancel"]
 		payload['amount'], payload['price'] = sell_quantity[0], sell_quantity[1]
-		if float(payload['price']) <= float(public_knc_orderbook['bids'][0]['price']):
+		if float(payload['price']) < float(public_knc_orderbook['asks'][0]['price'])-.0001:
 			payload['options'] = ["immediate-or-cancel"]
+			print("sold {} at {}".format(sell_quantity[0],sell_quantity[1]))
 
 	encoded_payload = json.dumps(payload).encode()
 	b64 = base64.b64encode(encoded_payload)
@@ -83,48 +84,54 @@ def get_knc_price_coinbase():
 		print("cant find knc price coinbase")
 		exit(0)
 
-
 	return float(knc_price)
 
+
+#replaces lowest 2 orders and keeps top 3 if they are same price as existing in my_order_book
 def replace_current_orders(new_orders):
-	count = len(new_orders)
-	my_order_book_len = len(my_order_book)
-	for i in range(count):
-		send_request_gemini('order/new',0,[str(randint(800,1500)),new_orders[i] - .0001])
-		if i < my_order_book_len and float(my_order_book[i]['price']) + .0001 not in new_orders:
-			send_request_gemini('order/cancel',my_order_book[i]['order_id'],0)
+	for i in range(len(new_orders)):
+		if i >= 2 and str(new_orders[i]) in my_order_prices:
+			continue
+		send_request_gemini('order/new',0,[str(randint(1200,2200)),new_orders[i]])
+		send_request_gemini('order/cancel',my_order_book[i]['order_id'],0)
 
 
+#return up to 5 new orders that undercut
 def penny_pinch():
-	count, o_count = 0,0
-	new_order = 0
-	new_order_price = 0
+	#print("start penny pinch")
+	count, last_order_price, total = 0,0,0
 	new_orders = []
+
 	for o in public_knc_orderbook['asks']:
+		total += float(o['amount'])
+
+		if float(o['price']) <= 1.07 * knc_price_coinbase or (last_order_price and (float(o['price'])) <= last_order_price * 1.005):
+			continue
+
 		if o['price'] in my_order_prices:
-			o_count+=1
 			continue
 
-		if str(float(o['price']) - .0001) in my_order_prices:
-			continue
-
-		if float(o['price']) <= 1.1 * knc_price_coinbase or (new_order and (float(o['price'])) <= new_order_price * 1.005):
-			continue
-
-		if float(o['amount']) > 350:
-			if count + o_count >= 6:
+		if float(o['amount']) >= 300 or (total >= 300 and count==0):
+			if count >= 5:
 				break
-			new_order_price = float(o['price'])
-			new_orders.append(new_order_price)
+			last_order_price = float(o['price'])
+			new_orders.append(round(last_order_price - .0001,5))
 			count += 1
 
-	#print("{} orders put in".format(count))
 	return new_orders
 
 
 def fill_high_order():
+	if float(public_knc_orderbook['bids'][0]['price']) < knc_price_coinbase * 1.05:
+		return
+
+	print("filling a bid")
+
 	for order in public_knc_orderbook['bids']:
-		if float(order['price']) >= knc_price_coinbase * 1.07 and float(order['amount']) > 500:
+		if float(order['price']) >= knc_price_coinbase * 1.05 and float(order['amount']) > 400:
+			send_request_gemini('order/new',0,[math.floor(float(order['amount'])),order['price']])
+
+		if float(order['price']) >= knc_price_coinbase * 1.07 and float(order['amount']) > 50:
 			send_request_gemini('order/new',0,[math.floor(float(order['amount'])),order['price']])
 
 		if float(order['price']) >= knc_price_coinbase * 1.1 and float(order['amount']) > 2:
@@ -136,14 +143,19 @@ if __name__ == "__main__":
 		try:
 			public_knc_orderbook = get_knc_orderbook_gemini()
 			knc_price_coinbase = get_knc_price_coinbase()
+
 			fill_high_order()
+
 			my_order_book = send_request_gemini('orders',0,0)
-			my_orders_length = len(my_order_book)
 			my_order_book = [o for o in my_order_book if o['symbol'] == 'kncusd']
 			my_order_book.sort(key=lambda x : x['price'])
 			my_order_prices = [o['price'] for o in my_order_book]
+
 			replace_current_orders(penny_pinch())
-			time.sleep(.75)
+			time.sleep(1)
+			if time_counter % 10000 == 0:
+				print("time counter: {} still running".format(time_counter))
+
 		except:
-			pass
-			#print("bugged out somewhere")
+			print("bugged out somewhere")
+			#exit(0)
