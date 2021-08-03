@@ -14,6 +14,9 @@ import math
 
 time_counter = 0
 
+PERCENT_GAIN_LIMIT_ORDER = 1.07  #7% minimum gain for limit orders
+FILL_ORDER_PERCENT = 1.05  #5% for filling an existing bid
+
 def send_request_gemini(req,order_id,sell_quantity):
 	url = "https://api.gemini.com/v1/{}".format(req)
 	gemini_api_key = 'yours'
@@ -33,7 +36,7 @@ def send_request_gemini(req,order_id,sell_quantity):
 		payload['amount'], payload['price'] = sell_quantity[0], sell_quantity[1]
 		if float(payload['price']) < float(public_knc_orderbook['asks'][0]['price'])-.0001:
 			payload['options'] = ["immediate-or-cancel"]
-			print("sold {} at {}".format(sell_quantity[0],sell_quantity[1]))
+			print("sold {} at {} at time {}".format(sell_quantity[0],sell_quantity[1],time.strftime("%H:%M:%S", time.localtime())))
 
 	encoded_payload = json.dumps(payload).encode()
 	b64 = base64.b64encode(encoded_payload)
@@ -90,28 +93,30 @@ def get_knc_price_coinbase():
 #replaces lowest 2 orders and keeps top 3 if they are same price as existing in my_order_book
 def replace_current_orders(new_orders):
 	for i in range(len(new_orders)):
-		if i >= 2 and str(new_orders[i]) in my_order_prices:
+		if i > 0 and str(new_orders[i]) in my_order_prices:
 			continue
-		send_request_gemini('order/new',0,[str(randint(1200,2200)),new_orders[i]])
+		if my_order_prices.count(str(new_orders[i])) < 2:
+			send_request_gemini('order/new',0,[str(randint(1200,2200)),new_orders[i]])
 		send_request_gemini('order/cancel',my_order_book[i]['order_id'],0)
 
 
 #return up to 5 new orders that undercut
 def penny_pinch():
 	#print("start penny pinch")
-	count, last_order_price, total = 0,0,0
+	count, last_order_price, total, my_total = 0,0,0,0
 	new_orders = []
 
 	for o in public_knc_orderbook['asks']:
 		total += float(o['amount'])
 
-		if float(o['price']) <= 1.07 * knc_price_coinbase or (last_order_price and (float(o['price'])) <= last_order_price * 1.005):
+		if float(o['price']) <= PERCENT_GAIN_LIMIT_ORDER * knc_price_coinbase or (last_order_price and (float(o['price'])) <= last_order_price * 1.005):
 			continue
 
 		if o['price'] in my_order_prices:
+			my_total += float(o['amount'])
 			continue
 
-		if float(o['amount']) >= 300 or (total >= 300 and count==0):
+		if float(o['amount']) >= 300 or (total - my_total >= 500 and count==0):
 			if count >= 5:
 				break
 			last_order_price = float(o['price'])
@@ -122,20 +127,12 @@ def penny_pinch():
 
 
 def fill_high_order():
-	if float(public_knc_orderbook['bids'][0]['price']) < knc_price_coinbase * 1.05:
-		return
-
-	print("filling a bid")
-
 	for order in public_knc_orderbook['bids']:
-		if float(order['price']) >= knc_price_coinbase * 1.05 and float(order['amount']) > 400:
+		if float(order['price']) >= knc_price_coinbase * FILL_ORDER_PERCENT:
+			print("sending request to fill at price {}".format(order['price']))
 			send_request_gemini('order/new',0,[math.floor(float(order['amount'])),order['price']])
-
-		if float(order['price']) >= knc_price_coinbase * 1.07 and float(order['amount']) > 50:
-			send_request_gemini('order/new',0,[math.floor(float(order['amount'])),order['price']])
-
-		if float(order['price']) >= knc_price_coinbase * 1.1 and float(order['amount']) > 2:
-			send_request_gemini('order/new',0,[math.floor(float(order['amount'])),order['price']])
+		else:
+			break
 
 
 if __name__ == "__main__":
@@ -152,10 +149,11 @@ if __name__ == "__main__":
 			my_order_prices = [o['price'] for o in my_order_book]
 
 			replace_current_orders(penny_pinch())
-			time.sleep(1)
-			if time_counter % 10000 == 0:
-				print("time counter: {} still running".format(time_counter))
 
+			time.sleep(1)
+			if time_counter % 1000 == 0:
+				print("time counter: {} still running".format(time_counter))
+			#break
 		except:
 			print("bugged out somewhere")
 			#exit(0)
