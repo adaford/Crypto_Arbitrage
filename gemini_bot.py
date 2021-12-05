@@ -15,7 +15,7 @@ FILL_ORDER_PERCENT = float(sys.argv[1])  #5% for filling an existing bid
 PERCENT_GAIN_LIMIT_ORDER = float(sys.argv[2])  #7% minimum gain for limit orders
 COIN_PAIR = sys.argv[3]                        #coin to be sold
 EXCHANGE = sys.argv[4]         				   #exchange to compare gemini price of coin to
-LIMIT_ORDERS = sys.argv[5]
+LIMIT_ORDERS = int(sys.argv[5])
 
 def send_request_gemini(req,order_id,sell_quantity):
 	global sms
