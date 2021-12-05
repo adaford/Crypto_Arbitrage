@@ -12,7 +12,7 @@ Be alerted to fat fingered whale market orders as soon as they happen!
 
 ******************************************************************************************************************************************************************
 
-python knc_bot.py ------> runs a continuous trading bot for knc on gemini
+$python gemini.py 1.05 1.07 kncusd coinbase 1 ------> runs a continuous trading bot for knc on gemini filling bids at >5% above coinbase price and undercutting large asks at >7% above coinbase price.
 
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
