@@ -14,7 +14,17 @@ def get_prices_coinmarketcap():
 	}
 	headers = {
 		'Accepts': 'application/json',
-		'X-CMC_PRO_API_KEY': 'c848953f-8966-44eb-88f8-c221206ba216',
+		'X-CMC_PRO_API_KEY': api_key_1,
+	}
+
+	parameters2 = {
+		'start':'150',
+		'limit':'300',
+		'convert':'USD'
+	}	
+	headers2 = {
+		'Accepts': 'application/json',
+		'X-CMC_PRO_API_KEY': api_key_2,
 	}
 
 	session = Session()
@@ -23,8 +33,21 @@ def get_prices_coinmarketcap():
 	try:
 		response = session.get(url, params=parameters)
 		data = json.loads(response.text)["data"]
-		for i in range(0,131):
+		for i in range(0,149):
 			ret[data[i]["symbol"]] = float(data[i]["quote"]["USD"]["price"])
+
+		session = Session()
+		session.headers.update(headers2)
+		response = session.get(url, params=parameters2)
+		data = json.loads(response.text)["data"]
+		for i in range(0,149):
+			ret[data[i]["symbol"]] = float(data[i]["quote"]["USD"]["price"])
+
+		annoying_coins = ["IOTX","VLX","TTT","ORBS","CEEK","COTI","SAFEMOON","ORC","YOOSHI"]
+		for coin in annoying_coins:
+			if coin in ret.keys():
+				del ret[coin]
+
 		return ret
 	except (ConnectionError, Timeout, TooManyRedirects) as e:
 		print(e)
@@ -39,7 +62,7 @@ def get_kraken_prices():
 	except:
 		print("Kraken prices unavailable")
 		return ret
-	not_us_coins = {'ANKR','BNT','EWT','FLOW','GHST','GRT','LPT','MINA','MKR','RARI','REN','SAND','SOL','SRM','SUSHI','XRP','ZRX'}
+	not_us_coins = {'1INCH','ANKR','AXS','BNT','CTSI','EWT','GHST','GRT','LPT','MINA','MKR','MOVR','RARI','REN','SAND','SOL','SRM','SUSHI','XRP','ZRX'}
 	coins = [val['altname'] for key, val in resp.items() if ('.' not in key and 'USD' not in key and key not in not_us_coins)]
 	for c in coins:
 		try:
@@ -64,6 +87,7 @@ def get_kraken_prices():
 	return ret
 
 
+#slow
 def get_coinbasepro_prices():
 	ret = {}
 	try:
@@ -81,10 +105,15 @@ def get_coinbasepro_prices():
 		except:
 			pass
 
+	try:
+		ret["CELO"] = ret["CGLD"]
+	except:
+		pass
+
 	return ret
 
 
-#could be fixed
+#fast
 def get_binanceUS_prices(binanceUS_coins):
 	ret = {}
 	try:
@@ -95,18 +124,16 @@ def get_binanceUS_prices(binanceUS_coins):
 
 	for pair in resp:
 		if pair['symbol'].replace("USD","") in binanceUS_coins:
-			ret[pair['symbol'].replace("USD","")] = float(pair['bidPrice'])
+			ret[pair['symbol'].replace("USD","")] = ((float(pair['askPrice']) + float(pair['bidPrice'])))/2
 		elif pair['symbol'].replace("USDT","") in binanceUS_coins:
-			ret[pair['symbol'].replace("USDT","")] = float(pair['bidPrice'])
+			ret[pair['symbol'].replace("USDT","")] = ((float(pair['askPrice']) + float(pair['bidPrice'])))/2
 		elif pair['symbol'].replace("BUSD","") in binanceUS_coins:
-			ret[pair['symbol'].replace("BUSD","")] = float(pair['bidPrice'])
-
-	#del ret["XLM"]
-	#del ret["HNT"]
+			ret[pair['symbol'].replace("BUSD","")] = ((float(pair['askPrice']) + float(pair['bidPrice'])))/2
 
 	return ret
 
 
+#fast
 def get_kucoin_prices(coins):
 	#uses strictly usdt
 	ret = {}
@@ -126,6 +153,7 @@ def get_kucoin_prices(coins):
 	return ret
 
 
+#fast
 def get_gemini_prices():
 	ret = {}
 	try:
@@ -135,11 +163,14 @@ def get_gemini_prices():
 		return ret
 	for c in coins:
 		if "usd" in c:
-			ret[c.replace("usd","").upper()] = float(requests.get('https://api.gemini.com/v1/pubticker/{}'.format(c)).json()['last'])
+			try:
+				ret[c.replace("usd","").upper()] = float(requests.get('https://api.gemini.com/v1/pubticker/{}'.format(c)).json()['last'])
+			except:
+				pass
 
 	return ret
 
-
+#fast
 def get_bittrex_prices():
 	ret = {}
 	resp = requests.get('https://api.bittrex.com/v3/markets/tickers').json()
@@ -150,25 +181,65 @@ def get_bittrex_prices():
 		elif coin[-4:] == "USDT":
 			ret[coin.replace("-USDT","")] = float(c['lastTradeRate'])
 
-	try:
-		del ret["CRV"]
-		del ret["RENBTC"]
-		del ret["KLAY"]
-		del ret["WBTC"]
-		del ret["REV"]
-		del ret["SNX"]
-		del ret["CRO"]
-		del ret["AVAX"]
-		del ret["USDN"]
-		del ret["RSR"]
-		del ret["1INCH"]
-		del ret["CKB"]
-		del ret["KSM"]
-		del ret["QTUM"]
-		del ret["LUNA"]
-		del ret["AMP"]
-		del ret["XDC"]
-	except:
-		pass
+	not_us_coins = ["ZEN","HIVE","FIL","AMP","AVAX","CRV","RENBTC","KLAY","WBTC","REV","SNX","CRO","USDN","RSR","1INCH","CKB","KSM","QTUM","LUNA","XDC","SAND","QNT","MED","VLX"]
+
+	for coin in not_us_coins:
+		try:
+			del ret[coin]
+		except:
+			pass
 
 	return ret
+
+#slow
+def get_cryptodotcom_prices(coinmarketcap_list):
+	ret = {}
+	coins = []
+	coin_dict = requests.get('https://api.crypto.com/v2/public/get-instruments').json()["result"]["instruments"]
+	for c in coin_dict:
+		if "USD" in c["instrument_name"] and c["instrument_name"].replace("_USDT","").replace("_USDC","").replace("_USD","") in coinmarketcap_list:
+			coins.append(c["instrument_name"])
+
+	for c in coins:
+		try:
+			ret[c.replace("_USDT","").replace("_USDC","").replace("_USD","")] = float(requests.get('https://api.crypto.com/v2/public/get-book?instrument_name={}&depth=1'.format(c)).json()["result"]["data"][0]["bids"][0][0])
+		except:
+			pass
+	return ret
+
+
+#fast
+def get_lbank_prices():
+	ret = {}
+	headers = {"contentType": "application/x-www-form-urlencoded"}
+	resp = requests.get('https://api.lbkex.com/v1/ticker.do?symbol=all', headers=headers).json()
+	
+	for r in resp:
+		if "usd" in r['symbol']:
+			ret[r['symbol'].replace("_usdt","").replace("_usd","").upper()] = float(r['ticker']['latest'])
+
+	return ret
+
+#fast
+def get_gateio_prices():
+	ret = {}
+
+	host = "https://api.gateio.ws"
+	prefix = "/api/v4"
+	headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
+
+	url = '/spot/tickers'
+	query_param = ''
+	resp = requests.request('GET', host + prefix + url, headers=headers).json()
+	for coin in resp:
+		if 'USD' in coin['currency_pair']:
+			ret[coin['currency_pair'].split('_')[0]] = float(coin['last'])
+
+	return ret
+
+#print(get_cryptodotcom_prices())
+#get_lbank_prices()
+#print(get_coinbasepro_prices())
+#print(get_gemini_prices())
+#get_gateio_prices()
+#print(get_prices_coinmarketcap())
