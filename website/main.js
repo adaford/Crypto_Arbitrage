@@ -56,17 +56,18 @@ function buildRows(numRows,list) {
     $('#Table').find('tbody>tr').remove()
     for(j=0;j<numRows;j++) {
         row = (j+1).toString()
-        coin = list[6*j].toString()
-        exchange = list[6*j+1].toString()
-        percent = list[6*j+2] + "%"
-        cmc_value = '$' + list[6*j+3].toString()
-        e_v = '$' + list[6*j+4].toString()
-        liquidity = '$' + list[6*j+5].toString()
-        color = parseFloat(list[6*j+2]) > 0 ? "text-green-500" : "text-red-500"
+        coin = list[7*j].toString()
+        exchange = list[7*j+1].toString()
+        percent = list[7*j+2] + "%"
+        cmc_value = '$' + list[7*j+3].toString()
+        e_v = '$' + list[7*j+4].toString()
+        liquidity_exchange = '$' + list[7*j+5].toString()
+        liqudity_gate = '$' + list[7*j+6].toString()
+        color = parseFloat(list[7*j+2]) > 0 ? "text-green-500" : "text-red-500"
 
         let content = '<tr><th scope="row">' + row + '</th><td>' + coin + '</td><td>' + exchange + '</td><td>' + 
             cmc_value + '</td><td>' + e_v + '</td><td><span class=' +
-            color + '></i>' + percent + '</span></td><td>' + liquidity + '</td></tr>'
+            color + '></i>' + percent + '</span></td><td>' + liquidity_exchange + '</td><td>' + liqudity_gate + '</td></tr>'
 
         $('#Table').find('tbody').append(content)  
     }
@@ -85,12 +86,18 @@ function buildRows(numRows,list) {
     }*/
 
 function parseResponseText(res) {
+    if (!res.includes(',')) {
+        buildRows(1,[0,0,0,0,0,0,0])
+        return
+    }
     let list = res.split(',')
-    let numRows = list.length/6
-
+    let numRows = list.length/7
     for(j=0;j<numRows;j++){
-        for(i=0;i<6;i++){
-            list[i+j*6] = list[i+j*6].replace(/[^0-9.a-z-]/gi, '')
+        for(i=0;i<7;i++){
+            if (list[i+j*7].includes(':')) {
+                list[i+j*7] = list[i+j*7].split(":")[1]
+            }         
+            list[i+j*7] = list[i+j*7].replace(/[^0-9.a-z-]/gi, '') 
         }
     }
     buildRows(numRows,list)
@@ -115,8 +122,8 @@ function sendRequest(url){
 window.onload=function(){
     if(document.createElement&&document.createTextNode){
         // send get request every 2 seconds
-        sendRequest("http://ec2-18-223-102-251.us-east-2.compute.amazonaws.com")
-        setInterval("sendRequest('http://18.223.102.251');",5*1000);
+        sendRequest("http://ec2-3-141-6-61.us-east-2.compute.amazonaws.com")
+        setInterval("sendRequest('http://3.141.6.61');",5*1000);
     }
 }
 
