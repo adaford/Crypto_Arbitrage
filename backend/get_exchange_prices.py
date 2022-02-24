@@ -3,47 +3,82 @@ import sys
 from requests import Request, Session
 from requests.exceptions import ConnectionError, Timeout, TooManyRedirects
 import json
+import random
 
 
+#4 accounts cause theyre *free*
 def get_prices_coinmarketcap():
 	url = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest'
 	parameters = {
 		'start':'1',
-		'limit':'150',
+		'limit':'200',
 		'convert':'USD'
 	}
 	headers = {
 		'Accepts': 'application/json',
-		'X-CMC_PRO_API_KEY': api_key_1,
+		'X-CMC_PRO_API_KEY': 'c848953f-8966-44eb-88f8-c221206ba216',
 	}
 
 	parameters2 = {
-		'start':'150',
-		'limit':'300',
+		'start':'201',
+		'limit':'200',
 		'convert':'USD'
 	}	
 	headers2 = {
 		'Accepts': 'application/json',
-		'X-CMC_PRO_API_KEY': api_key_2,
+		'X-CMC_PRO_API_KEY': 'e2ad1ceb-83ff-4d2d-b1b0-cdb194286d51',
+	}
+	parameters3 = {
+		'start':'1',
+		'limit':'200',
+		'convert':'USD'
+	}	
+	headers3 = {
+		'Accepts': 'application/json',
+		'X-CMC_PRO_API_KEY': '01459736-f9fa-4d5c-aa0a-840bcc5a9aa9',
+	}
+	parameters4 = {
+		'start':'201',
+		'limit':'200',
+		'convert':'USD'
+	}	
+	headers4 = {
+		'Accepts': 'application/json',
+		'X-CMC_PRO_API_KEY': '6370fef4-d029-4edb-9b7d-7f4e04e2330e',
 	}
 
 	session = Session()
-	session.headers.update(headers)
+	
 	ret = {}
 	try:
-		response = session.get(url, params=parameters)
-		data = json.loads(response.text)["data"]
-		for i in range(0,149):
-			ret[data[i]["symbol"]] = float(data[i]["quote"]["USD"]["price"])
+		x = random.randint(0,1)
+		if x == 0:
+			session.headers.update(headers)
+			response = session.get(url, params=parameters)
+			data = json.loads(response.text)["data"]
+			for i in range(200):
+				ret[data[i]["symbol"]] = float(data[i]["quote"]["USD"]["price"])
 
-		session = Session()
-		session.headers.update(headers2)
-		response = session.get(url, params=parameters2)
-		data = json.loads(response.text)["data"]
-		for i in range(0,149):
-			ret[data[i]["symbol"]] = float(data[i]["quote"]["USD"]["price"])
+			session.headers.update(headers2)
+			response = session.get(url, params=parameters2)
+			data = json.loads(response.text)["data"]
+			for i in range(200):
+				ret[data[i]["symbol"]] = float(data[i]["quote"]["USD"]["price"])
 
-		annoying_coins = ["IOTX","VLX","TTT","ORBS","CEEK","COTI","SAFEMOON","ORC","YOOSHI"]
+		elif x == 1:
+			session.headers.update(headers3)
+			response = session.get(url, params=parameters3)
+			data = json.loads(response.text)["data"]
+			for i in range(200):
+				ret[data[i]["symbol"]] = float(data[i]["quote"]["USD"]["price"])
+
+			session.headers.update(headers4)
+			response = session.get(url, params=parameters4)
+			data = json.loads(response.text)["data"]
+			for i in range(200):
+				ret[data[i]["symbol"]] = float(data[i]["quote"]["USD"]["price"])
+
+		annoying_coins = ["KEEP","GLMR","BZRX","OMI","HXRO","DG","LSK","SOUL","CORE","DESO","SOLO","AMPL","PRO","NCT","BTT","DAR","LCX","ICX","PYR","REEF","KIN","TIME","WEMIX","REP","IOTX","VLX","TTT","ORBS","CEEK","COTI","SAFEMOON","ORC","YOOSHI","ELF","KDA","QUACK"]
 		for coin in annoying_coins:
 			if coin in ret.keys():
 				del ret[coin]
@@ -52,7 +87,6 @@ def get_prices_coinmarketcap():
 	except (ConnectionError, Timeout, TooManyRedirects) as e:
 		print(e)
 
-	
 
 #slow
 def get_kraken_prices():
@@ -62,7 +96,7 @@ def get_kraken_prices():
 	except:
 		print("Kraken prices unavailable")
 		return ret
-	not_us_coins = {'1INCH','ANKR','AXS','BNT','CTSI','EWT','GHST','GRT','LPT','MINA','MKR','MOVR','RARI','REN','SAND','SOL','SRM','SUSHI','XRP','ZRX'}
+	not_us_coins = {'1INCH','ACA','AKT','ANKR','ASTR','BADGER','BAND','BNC','BNT','CQT','CTSI','EWT','FIDA','GHST','GLMR','GRT','INJ','KAR','KILT','KINT','LPT','LRC','MINA','MIR','MNGO','MOVR','OGN','OXY','PERP','PHA','RARI','RAY','REN','SDN','SRM','SUSHI','WBTC','XRP','ZRX'}
 	coins = [val['altname'] for key, val in resp.items() if ('.' not in key and 'USD' not in key and key not in not_us_coins)]
 	for c in coins:
 		try:
@@ -89,6 +123,14 @@ def get_kraken_prices():
 
 #slow
 def get_coinbasepro_prices():
+	annoying_coins = ["SOLO","ZRX","SOUL","ALGO","IOTX","GTC","REP"]
+	inactive_coins = set(annoying_coins)
+
+	resp = requests.get('https://api.exchange.coinbase.com/currencies').json()
+	for coin in resp:
+		if coin['status'] != 'online':
+			inactive_coins.add(coin['id'])
+
 	ret = {}
 	try:
 		resp = requests.get('https://api.pro.coinbase.com/products').json()
@@ -96,8 +138,9 @@ def get_coinbasepro_prices():
 		print("coinbase prices unavailable")
 		return ret
 
-	coins = [k['id'] for k in resp if "USD" in k['id']]
 	
+	coins = [k['id'] for k in resp if "USD" in k['id'] and "EUR" not in k['id'] and "GBP" not in k['id'] and k['id'].split('-',1)[0] not in inactive_coins]
+
 	for c in coins:
 		try:
 			resp = requests.get('https://api.pro.coinbase.com/products/{}/ticker'.format(c))
@@ -105,13 +148,7 @@ def get_coinbasepro_prices():
 		except:
 			pass
 
-	try:
-		ret["CELO"] = ret["CGLD"]
-	except:
-		pass
-
 	return ret
-
 
 #fast
 def get_binanceUS_prices(binanceUS_coins):
@@ -134,26 +171,40 @@ def get_binanceUS_prices(binanceUS_coins):
 
 
 #fast
-def get_kucoin_prices(coins):
+def get_kucoin_prices():
 	#uses strictly usdt
 	ret = {}
+	inactive_coins = []
+	potentially_inactive_coins = {}
 	try:
 		resp = requests.get('https://api.kucoin.com/api/v1/market/allTickers').json()['data']['ticker']
+		resp2 = requests.get('https://api.kucoin.com/api/v1/currencies').json()['data']
 	except:
 		print("cant get kucoin prices")
 		return ret
 
+	for coin in resp2:
+		potentially_inactive_coins[coin["currency"]] = coin["isWithdrawEnabled"] & coin["isDepositEnabled"]
+
 	for d in resp:
-		if d['symbol'].replace("-USDT","") in coins:
-			try:
+		try:
+			if "USDT" in d['symbol'] and "3S" not in d['symbol'] and '3L' not in d['symbol'] and potentially_inactive_coins[d['symbol'].replace("-USDT","")]:
 				ret[d['symbol'].replace("-USDT","")] = float(d['buy'])
-			except:
-				print(d['symbol'] + " not working")
+		except:
+			pass
+			#print(d['symbol'] + " not working")
+
+	annoying_coins = ["SUSD","GTC","STC","TIME","BCHA","BUY","GRIN","QI","NANO","BZRX","PDEX"]
+	for coin in annoying_coins:
+		try:
+			del ret[coin]
+		except:
+			pass
 
 	return ret
 
 
-#fast
+#slow but has small list of coins
 def get_gemini_prices():
 	ret = {}
 	try:
@@ -170,6 +221,7 @@ def get_gemini_prices():
 
 	return ret
 
+
 #fast
 def get_bittrex_prices():
 	ret = {}
@@ -181,7 +233,7 @@ def get_bittrex_prices():
 		elif coin[-4:] == "USDT":
 			ret[coin.replace("-USDT","")] = float(c['lastTradeRate'])
 
-	not_us_coins = ["ZEN","HIVE","FIL","AMP","AVAX","CRV","RENBTC","KLAY","WBTC","REV","SNX","CRO","USDN","RSR","1INCH","CKB","KSM","QTUM","LUNA","XDC","SAND","QNT","MED","VLX"]
+	not_us_coins = ["SYS","ZEN","HIVE","FIL","AMP","AVAX","CRV","CRTS","RENBTC","KLAY","WBTC","REV","SNX","CRO","USDN","RSR","1INCH","CKB","KSM","QTUM","LUNA","XDC","SAND","QNT","MED","VLX"]
 
 	for coin in not_us_coins:
 		try:
@@ -190,6 +242,7 @@ def get_bittrex_prices():
 			pass
 
 	return ret
+
 
 #slow
 def get_cryptodotcom_prices(coinmarketcap_list):
@@ -220,26 +273,60 @@ def get_lbank_prices():
 
 	return ret
 
+
 #fast
 def get_gateio_prices():
 	ret = {}
-
+	inactive_coins = {}
+	
 	host = "https://api.gateio.ws"
 	prefix = "/api/v4"
+	url_prices  = "/spot/tickers"
+	url_statuses = "/spot/currencies"
 	headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
-
-	url = '/spot/tickers'
 	query_param = ''
-	resp = requests.request('GET', host + prefix + url, headers=headers).json()
+
+	try:
+		resp = requests.request('GET', host + prefix + url_prices, headers=headers).json()
+		resp2 = requests.request('GET', host + prefix + url_statuses, headers=headers).json()
+	except:
+		return ret
+	
+	for coin in resp2:
+		inactive_coins[coin["currency"]] = True in coin.values()
+
 	for coin in resp:
-		if 'USD' in coin['currency_pair']:
-			ret[coin['currency_pair'].split('_')[0]] = float(coin['last'])
+		try:
+			if 'USD' in coin['currency_pair']:
+				if inactive_coins[coin['currency_pair'].split('_')[0]]:
+					continue
+				ret[coin['currency_pair'].split('_')[0]] = float(coin['last'])
+		except:
+			pass
 
 	return ret
 
-#print(get_cryptodotcom_prices())
-#get_lbank_prices()
-#print(get_coinbasepro_prices())
-#print(get_gemini_prices())
-#get_gateio_prices()
-#print(get_prices_coinmarketcap())
+
+def get_ftx_prices():
+	ret = {}
+
+	url =  'https://ftx.com/api/markets'
+	try:
+		response = requests.get(url).json()['result']
+	except:
+		return ret
+
+	for coinpair in response:
+		if "USD" in coinpair['name'] and "BULL" not in coinpair['name'] and "BEAR" not in coinpair['name'] and "HALF" not in coinpair['name'] and "HEDGE" not in coinpair['name']:
+			coin = coinpair['name'].split('/')[0]
+			ret[coin] = coinpair['last']
+
+	return ret
+
+
+def get_kucoin_leverage(coin):
+	resp = requests.get('https://api.kucoin.com/api/v1/symbols').json()['data']
+	for r in resp:
+		if r['symbol'].split('-')[0] == coin and r['symbol'].split('-')[1] == "USDT":
+			return r['isMarginEnabled']
+
