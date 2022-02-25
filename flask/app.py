@@ -1,7 +1,7 @@
 import flask
 import waitress
 app = flask.Flask(__name__)
-app.config["DEBUG"] = True
+app.config["DEBUG"] = False
 
 
 @app.route('/')
