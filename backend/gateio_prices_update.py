@@ -1,11 +1,10 @@
 import traceback
 import time
 import json
-import arbitrage_hunt
+from arbitrage_hunt import ArbitrageHunt as ah
 
 
 def main():
-	ah = arbitrage_hunt.ArbitrageHunt()
 	while 1:
 		try:
 			gateio_prices = ah.get_prices("GATEIO")
@@ -23,7 +22,7 @@ def main():
 			print("gateio update bugged out, time: {}".format(time.asctime(time.localtime())))
 			print(f"Unexpected {err}, {type(err)}")
 			print(traceback.format_exc())
-			exit(0)
+			#exit(0)
 
 
 if __name__ == "__main__":

@@ -2,16 +2,16 @@ import json
 import time
 import os
 import ast
-import arbitrage_hunt
-
+from arbitrage_hunt import ArbitrageHunt as ah
 
 
 def main():
-	ah = arbitrage_hunt.ArbitrageHunt()
 	while 1:
 		try:		
 			output_webpage = []
 			for exchange in ah.exchange_list:
+				if exchange == "gateio":
+					continue
 				with open(ah.OUTPUT_PATH+exchange+'.log') as file:
 					read_file = file.read()
 					if not read_file:
