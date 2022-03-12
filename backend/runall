@@ -1,0 +1,7 @@
+nohup python3 -u gateio_prices_update.py &
+nohup python3 -u append_to_website.py &
+nohup python3 -u exchange_to_gate_compare.py coinbasepro &
+nohup python3 -u exchange_to_gate_compare.py kraken &
+nohup python3 -u exchange_to_gate_compare.py gemini &
+nohup python3 -u exchange_to_gate_compare.py kucoin &
+
