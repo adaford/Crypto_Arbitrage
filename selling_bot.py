@@ -1,13 +1,6 @@
 import sys
-import requests
-import json
-import base64
-import hmac
-import hashlib
 import datetime, time
-import math
 import traceback
-import SMS
 import exchange_trade
 
 
