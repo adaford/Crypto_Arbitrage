@@ -7,12 +7,12 @@ import exchange_trade
 
 def main():
 	coinpair = sys.argv[1].lower()              #coin to be sold
-	selling_exchange = sys.argv[2].lower()		#exchange where transactions taking place
+	selling_exchange = sys.argv[2].lower()		#exchange where transaction are taking place
 	arbitraged_exchange = sys.argv[3].lower()   #exchange to compare price of coin to
 	fill_above = float(sys.argv[4])  	   		#percent to fill bids at (1.05 = 5% above market value)
 	limit_above = float(sys.argv[5])       		#percent to put limit orders in at
 	num_limit_orders = int(sys.argv[6])	   		#number of limit orders to put in
-	is_extra_aggressive = int(sys.argv[7]) 		#use to add extra limit order in if other fast bot present
+	is_extra_aggressive = bool(sys.argv[7]) 		#use to add extra limit order in if other fast bot present
 
 	exchanges = {"gemini":"GeminiTrade","coinbasepro":"CoinbaseproTrade",'kucoin':"KucoinTrade","gateio":"GateioTrade","kraken":"KrakenTrade"}
 	bot_class_name = getattr(exchange_trade,exchanges[selling_exchange])
@@ -50,8 +50,8 @@ def main():
 			count += 1
 			if count % 1000 == 0:
 				print("count: {} still running {} on {}".format(count,coinpair,selling_exchange))
-				trade.sms = True
-				trade.sms2 = True
+				bot.sms = True
+				bot.sms2 = True
 			#break
 
 		except BaseException as err:
