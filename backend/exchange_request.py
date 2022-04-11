@@ -8,11 +8,75 @@ import hashlib
 import sys
 import SMS
 import annoying_coins
+import traceback
+from threading import Thread
 
 
 
 class ExchangeRequest:
 	percent_buffer = 1.01
+
+
+	@classmethod
+	def get_exchange(cls):
+		return cls.__name__.split("Request")[0]
+
+
+	@classmethod
+	def get_coin_price(cls,coin):
+		for i in range(3):
+			try:
+				return cls.get_request_coin_price(coin)
+			except:
+				pass
+		return -1
+
+
+	def get_coin_prices(coins):
+		return coins
+
+
+	@classmethod
+	def get_all_prices(cls):
+		try:
+			all_coins = cls.get_coin_list()
+			coins = cls.remove_unwanted_coins(all_coins)
+			return cls.get_coin_prices(coins)
+		except BaseException as err:
+			print(err)
+			print(traceback.format_exc())
+			print("cannot find coinlist on {}".format(cls.get_exchange()))
+			return 0
+		
+
+	@classmethod
+	def process_range(cls, id_range, store=None):
+	    """process a number of ids, storing the results in a dict"""
+	    if store is None:
+	        store = {}
+	    for id in id_range:
+	    	coin = cls.normalize_coin(id)
+	    	store[coin] = cls.get_coin_price(id)
+	    return store
+
+
+	@classmethod
+	def threaded_process_range(cls, nthreads, id_range):
+	    """process the id range in a specified number of threads"""
+	    store = {}
+	    threads = []
+	    # create the threads
+	    for i in range(nthreads):
+	        ids = id_range[i::nthreads]
+	        t = Thread(target=cls.process_range, args=(ids,store))
+	        threads.append(t)
+
+	    # start the threads
+	    [ t.start() for t in threads ]
+	    # wait for the threads to finish
+	    [ t.join() for t in threads ]
+	    return store
+
 
 	@classmethod
 	def get_coin_liquidity(cls, coin, is_overvalued, market_value):
@@ -33,12 +97,11 @@ class ExchangeRequest:
 					liquidity += cls.return_liqudity(a)
 
 			return int(liquidity)
-		except:
+		except BaseException as err:
+			#print(err)
+			#print(traceback.format_exc())
+			print("cannot find {} liqudity on {}".format(cls.get_exchange(),coin))
 			return "Unknown"
-
-
-	def get_orderbook(coin):
-		raise NotImplementedError('')
   	
 
 	def return_orders(resp, is_overvalued):
@@ -57,26 +120,25 @@ class ExchangeRequest:
 
 
 class GeminiRequest(ExchangeRequest):
-	@staticmethod
-	def get_coin_price(coin_pair):
-		return float(requests.get('https://api.gemini.com/v1/pubticker/{}'.format(coin_pair)).json()['last'])
+	def get_request_coin_price(coin):
+		return float(requests.get('https://api.gemini.com/v1/pubticker/{}'.format(coin)).json()['last'])
 
 
-	@staticmethod
-	def get_all_prices():
-		ret = {}
-		try:
-			coins = requests.get('https://api.gemini.com/v1/symbols').json()
-		except:
-			print("cant get gemini coins")
-			return ret
-		for c in coins:
-			if "usd" in c:
-				try:
-					ret[c.replace("usd","").upper()] = float(requests.get('https://api.gemini.com/v1/pubticker/{}'.format(c)).json()['last'])
-				except:
-					pass
-		return ret
+	def get_coin_list():
+		return requests.get('https://api.gemini.com/v1/symbols').json()
+
+
+	def remove_unwanted_coins(all_coins):
+		return [coin for coin in all_coins if "usd" in coin]
+
+
+	def normalize_coin(coin):
+		return coin.split("usd")[0].upper()
+
+
+	@classmethod
+	def get_coin_prices(cls,coins):
+		return cls.threaded_process_range(5,coins)
 
 
 	def get_orderbook(coin):
@@ -92,83 +154,56 @@ class GeminiRequest(ExchangeRequest):
 
 
 class GateioRequest(ExchangeRequest):
-	@staticmethod
-	def get_coin_price(coin_pair):
-		coin_gateio = coin_pair[0:-3].upper() + '_' + coin_pair[-3:].upper() + 'T'
+	def get_coin_list():
 		headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
-		return float(requests.get("https://api.gateio.ws/api/v4/spot/tickers?currency_pair={}".format(coin_gateio),headers=headers).json()[0]['last'])
+		return requests.request('GET', "https://api.gateio.ws/api/v4/spot/tickers", headers=headers).json()
 
 
-	@staticmethod
-	def get_all_prices():
-		ret = {}
-		inactive_coins = {}
-		
-		host = "https://api.gateio.ws"
-		prefix = "/api/v4"
-		url_prices  = "/spot/tickers"
-		url_statuses = "/spot/currencies"
+	def remove_unwanted_coins(all_coins):
+		inactive_coins = annoying_coins.annoying_coins_gateio
 		headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
-		query_param = ''
-
-		try:
-			resp = requests.request('GET', host + prefix + url_prices, headers=headers).json()
-			resp2 = requests.request('GET', host + prefix + url_statuses, headers=headers).json()
-		except:
-			return ret
-		
-		for coin in resp2:
-			inactive_coins[coin["currency"]] = True in coin.values()
-
+		resp = requests.request('GET', "https://api.gateio.ws/api/v4/spot/currencies", headers=headers).json()
 		for coin in resp:
-			try:
-				if 'USD' in coin['currency_pair']:
-					if inactive_coins[coin['currency_pair'].split('_')[0]]:
-						continue
-					ret[coin['currency_pair'].split('_')[0]] = float(coin['last'])
-			except:
-				pass
-
-		return ret
+			if True in coin.values():
+				inactive_coins.add(coin["currency"])
+		for coin in all_coins:
+			if not coin['lowest_ask']:
+				inactive_coins.add(coin['currency_pair'].split('_')[0]) 
+		return {coin['currency_pair'].split('_')[0]:float(coin['lowest_ask']) for coin in all_coins if 'USD' in coin['currency_pair'] and coin['currency_pair'].split('_')[0] not in inactive_coins}
 
 
 	def get_orderbook(coin):
-		host = "https://api.gateio.ws"
-		prefix = "/api/v4"
 		headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
-		url = '/spot/order_book'
-		query_param = 'currency_pair={}&limit=100'.format(coin + '_USDT')
-		return requests.request('GET', host + prefix + url + "?" + query_param, headers=headers).json()
+		return requests.request('GET', "https://api.gateio.ws/api/v4/spot/order_book?currency_pair={}&limit=100".format(coin + '_USDT'), headers=headers).json()
 
 
 class CoinbaseproRequest(ExchangeRequest):
-	@staticmethod
-	def get_coin_price(coin_pair):
-		coin_coinbase = coin_pair[0:-3].upper() + '-' + coin_pair[-3:].upper()
-		return float(requests.get("https://api.pro.coinbase.com/products/{}/ticker".format(coin_coinbase)).json()['price'])
+	def get_request_coin_price(coin):
+		if "-USD" not in coin:
+			coin = coin + "-USD"
+		return float(requests.get("https://api.pro.coinbase.com/products/{}/ticker".format(coin)).json()['price'])
 
 
-	@staticmethod
-	def get_all_prices():
+	def get_coin_list():
+		return requests.get("https://api.pro.coinbase.com/products").json()
+
+
+	def remove_unwanted_coins(all_coins):
 		inactive_coins = annoying_coins.annoying_coins_coinbasepro
-		resp = requests.get('https://api.exchange.coinbase.com/currencies').json()
+		resp = requests.get("https://api.pro.coinbase.com/currencies").json()
 		for coin in resp:
 			if coin['status'] != 'online':
 				inactive_coins.add(coin['id'])
-		ret = {}
-		try:
-			resp = requests.get('https://api.pro.coinbase.com/products').json()
-		except:
-			print("coinbase prices unavailable")
-			return ret
-		coins = [k['id'] for k in resp if "USD" in k['id'] and "EUR" not in k['id'] and "GBP" not in k['id'] and k['id'].split('-',1)[0] not in inactive_coins]
-		for c in coins:
-			try:
-				resp = requests.get('https://api.pro.coinbase.com/products/{}/ticker'.format(c))
-				ret[c.split('-',1)[0]] = float(resp.json()['price'])
-			except:
-				pass
-		return ret
+		return [k['id'] for k in all_coins if "USD" in k['id'] and "EUR" not in k['id'] and "GBP" not in k['id'] and k['id'].split('-',1)[0] not in inactive_coins]
+
+
+	def normalize_coin(coin):
+		return coin.split('-')[0].upper()
+
+
+	@classmethod
+	def get_coin_prices(cls,coins):
+		return cls.threaded_process_range(2,coins)
 
 
 	def get_orderbook(coin):
@@ -176,37 +211,17 @@ class CoinbaseproRequest(ExchangeRequest):
 
 
 class KucoinRequest(ExchangeRequest):
-	@staticmethod
-	def get_coin_price(coin_pair):
-		coin_pair = coin_pair.split("usd")[0].upper() + "-USDT"
-		return float(requests.get("https://api.kucoin.com/api/v1/market/orderbook/level1?symbol={}".format(coin_pair)).json()['data']['price'])
+	def get_coin_list():
+		return requests.get('https://api.kucoin.com/api/v1/market/allTickers').json()['data']['ticker']
 
 
-	@staticmethod
-	def get_all_prices():
-		#uses strictly usdt
-		ret = {}
-		inactive_coins = {}
-		try:
-			resp = requests.get('https://api.kucoin.com/api/v1/market/allTickers').json()['data']['ticker']
-			resp2 = requests.get('https://api.kucoin.com/api/v1/currencies').json()['data']
-		except:
-			print("cant get kucoin prices")
-			return ret
-		for coin in resp2:
-			inactive_coins[coin["currency"]] = not(coin["isWithdrawEnabled"] & coin["isDepositEnabled"])
-		for d in resp:
-			try:
-				if "USDT" in d['symbol'] and "3S" not in d['symbol'] and '3L' not in d['symbol'] and not inactive_coins[d['symbol'].replace("-USDT","")]:
-					ret[d['symbol'].replace("-USDT","")] = float(d['buy'])
-			except:
-				pass
-		for coin in annoying_coins.annoying_coins_kucoin:
-			try:
-				del ret[coin]
-			except:
-				pass
-		return ret
+	def remove_unwanted_coins(all_coins):
+		inactive_coins = annoying_coins.annoying_coins_kucoin
+		resp = requests.get('https://api.kucoin.com/api/v1/currencies').json()['data']
+		for coin in resp:
+			if not(coin["isWithdrawEnabled"] & coin["isDepositEnabled"]):
+				inactive_coins.add(coin["currency"])
+		return {coin['symbol'].replace("-USDT",""):float(coin['last']) for coin in all_coins if "USDT" in coin['symbol'] and "3S" not in coin['symbol'] and '3L' not in coin['symbol'] and coin['symbol'].replace("-USDT","") not in inactive_coins}
 
 
 	def get_orderbook(coin):
@@ -229,38 +244,28 @@ class KucoinRequest(ExchangeRequest):
 
 
 class KrakenRequest(ExchangeRequest):
-	@staticmethod
-	def get_coin_price(coin_pair):
-		coin_pair = coin_pair.split("usd")[0].upper()
-		resp = requests.get('https://api.kraken.com/0/public/Ticker?pair={}USD'.format(coin_pair)).json()
-		try:
-			resp = resp['result']
-			return float(resp[list(resp.keys())[0]]['a'][0])
-		except:
-			return -1
+	def get_request_coin_price(coin):
+		"""if '_' not in coin:
+			coin = coin + '_USDT'"""
+		resp = requests.get('https://api.kraken.com/0/public/Ticker?pair={}USD'.format(coin)).json()['result']
+		return float(resp[list(resp.keys())[0]]['b'][0])
 
 
-	@staticmethod
-	def get_all_prices():
-		ret = {}
-		try:
-			resp = requests.get('https://api.kraken.com/0/public/Assets').json()['result']
-		except:
-			print("Kraken prices unavailable")
-			return ret
-		coins = [key for key, val in resp.items() if ('.' not in key and 'USD' not in key and key not in annoying_coins.not_us_coins_kraken)]
-		for c in coins:
-			try:
-				resp = requests.get('https://api.kraken.com/0/public/Ticker?pair={}USD'.format(c)).json()
-				ret[c] = float(resp['result'][list(resp.keys())[0]]['a'][0])
-			except:
-				pass
-		try:
-			ret["BTC"] = ret["XBT"]
-			ret["DOGE"] = ret["XDG"]
-		except:
-			pass
-		return ret
+	def get_coin_list():
+		return requests.get('https://api.kraken.com/0/public/Assets').json()['result']
+
+
+	def remove_unwanted_coins(all_coins):
+		return [coin for (coin,val) in all_coins.items() if '.' not in coin and 'USD' not in coin and coin not in annoying_coins.not_us_coins_kraken]
+
+
+	def normalize_coin(coin):
+		return coin
+
+
+	@classmethod
+	def get_coin_prices(cls,coins):
+		return cls.threaded_process_range(5,coins)
 
 
 	def get_orderbook(coin):
@@ -273,3 +278,56 @@ class KrakenRequest(ExchangeRequest):
 		else:
 			return resp[list(resp.keys())[0]]['asks']
 
+
+class MexcRequest(ExchangeRequest):
+	def get_request_coin_price(coin):
+		if '_' not in coin:
+			coin = coin + '_USDT'
+		return float(requests.get("https://www.mexc.com/open/api/v2/market/ticker?symbol={}".format(coin)).json()['data'][0]['last'])
+
+
+	def get_coin_list():
+		return requests.get("https://www.mexc.com/open/api/v2/market/symbols").json()['data']
+
+
+	def remove_unwanted_coins(all_coins):
+		leveraged_symbols = {'2S','3S','4S','2L','3L','4L','5S','5L'}
+		return [coin['symbol'] for coin in all_coins if coin['state'] == 'ENABLED' and "USD" in coin['symbol'] and coin['symbol'].split('_')[0][-2:] not in leveraged_symbols and coin['symbol'].split('_')[0] not in annoying_coins.annoying_coins_mexc]
+
+
+	def normalize_coin(coin):
+		return coin.split('_')[0].upper()
+
+
+	@classmethod
+	def get_coin_prices(cls,coins):
+		return cls.threaded_process_range(8,coins)
+
+
+	def get_orderbook(coin):
+		return requests.get("https://www.mexc.com/open/api/v2/market/depth?symbol={}_USDT&depth=2000".format(coin)).json()['data']
+
+
+	def return_price(order):
+		return float(order['price'])
+
+
+	def return_liqudity(order):
+		return float(order['price']) * float(order['quantity'])
+
+
+#print(MexcRequest.get_coin_price("TOKEN_USDT"))
+#print(MexcRequest.get_all_prices())
+#print(CoinbaseproRequest.get_coin_price("ETH-USD"))
+#x = GeminiRequest.get_all_prices()
+#for a in x:
+	#if x[a] == -1:
+		#print(a)
+		#print(CoinbaseproRequest.get_coin_price(a))
+#print(MexcRequest.get_coin_liquidity("BTC", True, 46000))
+#print(GeminiRequest.get_all_prices())
+#print(GateioRequest.get_all_prices())
+#print(GateioRequest.get_coin_liquidity("BTC",1,40000))
+#print(KucoinRequest.get_all_prices())
+#print(KrakenRequest.get_all_prices()["JASMY"])
+#print(GeminiRequest.get_all_prices())
