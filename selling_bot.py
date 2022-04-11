@@ -12,29 +12,24 @@ def main():
 	fill_above = float(sys.argv[4])  	   		#percent to fill bids at (1.05 = 5% above market value)
 	limit_above = float(sys.argv[5])       		#percent to put limit orders in at
 	num_limit_orders = int(sys.argv[6])	   		#number of limit orders to put in
-	is_extra_aggressive = bool(sys.argv[7]) 		#use to add extra limit order in if other fast bot present
-
+	is_extra_aggressive = bool(int(sys.argv[7])) 		#use to add extra limit order in if other fast bot present
+	print("{} bot on {} starting".format(coinpair,selling_exchange))
 	exchanges = {"gemini":"GeminiTrade","coinbasepro":"CoinbaseproTrade",'kucoin':"KucoinTrade","gateio":"GateioTrade","kraken":"KrakenTrade"}
 	bot_class_name = getattr(exchange_trade,exchanges[selling_exchange])
 	bot = bot_class_name(coinpair,arbitraged_exchange,fill_above,limit_above,num_limit_orders,is_extra_aggressive)
-
-	if bot.coin_status == 'closed':
-		print("broken coin {} on exchange {} ---- exiting".format(coinpair,selling_exchange))
-		exit(0)
 
 	bot.get_my_orders()
 
 	count = 0
 	while 1:
 		try:
+			if bot.num_limit_orders and not bot.get_my_orders():
+				continue
 			bot.get_coin_quantity()
-			bot.get_coinpair_orderbook()
 			bot.get_coin_price_arbitraged_exchange()
+			bot.get_coinpair_orderbook()
 
 			if bot.my_coin_quantity < 0 or not bot.coinpair_orderbook or not bot.coin_price:
-				continue
-
-			if bot.num_limit_orders and not bot.get_my_orders():
 				continue
 
 			bot.fill_bids()
@@ -43,16 +38,16 @@ def main():
 				bot.replace_current_orders(bot.find_limit_order_values())
 
 				#Fool Buyers
-				if bot.is_stablecoin:
+				if bot.is_stablecoin and selling_exchange == 'gemini':
 					bot.correct_price()
 
 			time.sleep(1)
 			count += 1
-			if count % 1000 == 0:
+			if count % 5000 == 0:
 				print("count: {} still running {} on {}".format(count,coinpair,selling_exchange))
 				bot.sms = True
 				bot.sms2 = True
-			#break
+			break
 
 		except BaseException as err:
 			print("{} on {} bugged out, time: {}".format(coinpair,selling_exchange,time.asctime(time.localtime())))
